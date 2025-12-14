@@ -1,0 +1,76 @@
+{
+  "name": "pino-file-transport",
+  "author": "DiiiaZoTe",
+  "license": "MIT",
+  "version": "1.0.0",
+  "description": "Pino file transport with rotation, archiving, and retention support for Node/Bun projects.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DiiiaZoTe/pino-file-transport"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./archive.worker": "./dist/workers/archive.worker.js",
+    "./retention.worker": "./dist/workers/retention.worker.js"
+  },
+  "scripts": {
+    "build": "bun run clean && bun run build:types && bun run build:compile",
+    "build:compile": "bun build src/index.ts src/workers/archive.worker.ts src/workers/retention.worker.ts --outdir dist --target node --format esm --packages=external",
+    "build:types": "tsc --emitDeclarationOnly --project tsconfig.json",
+    "test": "bun run build && bun test",
+    "benchmark": "bun run build && bun run tests/benchmark.ts",
+    "benchmark:multi-core": "bun run build && bun run tests/benchmark.ts --multi-core",
+    "clean": "rimraf dist logs",
+    "size": "gzip-size dist/**/*.js",
+    "lint": "biome check src",
+    "format": "biome format --write src --line-ending auto",
+    "npm:prepublish": "bun run format && bun run lint && bun run test && bun run clean && bun run build",
+    "npm:prepublish-test": "bun run build && npm publish --dry-run",
+    "npm:prepublish-pack": "bun run build && npm pack",
+    "npm:version:patch": "npm version patch",
+    "npm:version:minor": "npm version minor",
+    "npm:version:major": "npm version major",
+    "npm:publish": "bun run npm:prepublish && npm publish && bun run git:tags",
+    "git:tags": "git push --tags"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
+    "@types/autocannon": "^7.12.7",
+    "@types/bun": "latest",
+    "autocannon": "^8.0.0",
+    "gzip-size-cli": "^5.1.0",
+    "hono": "^4.10.7",
+    "rimraf": "^6.1.2",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "import-meta-resolve": "^4.2.0",
+    "node-cron": "^4.2.1",
+    "pino": "^10.1.0",
+    "sonic-boom": "^4.2.0",
+    "tar": "^7.5.2"
+  },
+  "keywords": [
+    "pino",
+    "transport",
+    "file-transport",
+    "logger",
+    "logs",
+    "logging",
+    "rotation",
+    "archive",
+    "retention",
+    "sonic-boom",
+    "node",
+    "bun"
+  ]
+}
