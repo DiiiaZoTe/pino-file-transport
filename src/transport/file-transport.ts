@@ -56,11 +56,19 @@ export class FileTransport {
     });
   }
 
+  private writeCount = 0;
+
   /**
    * Write a log line.
    * This is the main write interface for pino.
    */
   write(data: string): boolean {
+    // DEBUG: Log first write to confirm this method is being called
+    if (this.writeCount === 0) {
+      console.error(`[DEBUG] FileTransport.write() FIRST CALL - maxSizeBytes: ${this.maxSizeBytes}`);
+    }
+    this.writeCount++;
+
     const line = data.endsWith("\n") ? data : `${data}\n`;
 
     // During rotation, buffer writes
@@ -77,10 +85,17 @@ export class FileTransport {
     const sizeExceeded =
       this.maxSizeBytes > 0 && this.bytesWritten + lineBytes >= this.maxSizeBytes;
 
+    // DEBUG: Log every 10MB
+    if (this.bytesWritten > 0 && this.bytesWritten % (10 * 1024 * 1024) < lineBytes) {
+      console.error(`[DEBUG] bytesWritten: ${(this.bytesWritten / 1024 / 1024).toFixed(2)}MB, maxSizeBytes: ${this.maxSizeBytes}, sizeExceeded: ${sizeExceeded}`);
+    }
+
     if (periodChanged || sizeExceeded) {
       // Start rotation
       this.isRotating = true;
       this.pendingWrites.push(line);
+
+      console.error(`[DEBUG] ROTATION TRIGGERED! reason: ${sizeExceeded ? "size" : "period"}, bytesWritten: ${(this.bytesWritten / 1024 / 1024).toFixed(2)}MB`);
 
       this.rotate(sizeExceeded ? "size" : "period")
         .then(() => this.processPendingWrites())
