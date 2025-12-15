@@ -78,10 +78,10 @@ export class FileTransport {
       this.pendingWrites.push(line);
 
       this.rotate(sizeExceeded ? "size" : "period")
+        .then(() => this.processPendingWrites())
         .catch((err) => console.error(`[${DEFAULT_PACKAGE_NAME}] Rotation failed:`, err))
         .finally(() => {
           this.isRotating = false;
-          this.processPendingWrites();
         });
 
       return true;
@@ -211,14 +211,33 @@ export class FileTransport {
 
   /**
    * Process writes that accumulated during rotation.
+   * Checks size limits and triggers additional rotations if needed.
    */
   private processPendingWrites(): void {
-    for (const line of this.pendingWrites) {
+    // Move pending writes to local array and clear immediately
+    // This ensures any new writes during processing go to a fresh pendingWrites array
+    const pending = this.pendingWrites;
+    this.pendingWrites = [];
+
+    for (const line of pending) {
       const lineBytes = Buffer.byteLength(line, "utf8");
+
+      // Check if this write would exceed size limit
+      if (this.maxSizeBytes > 0 && this.bytesWritten + lineBytes >= this.maxSizeBytes) {
+        // Need another rotation - prepend remaining lines to any new writes that arrived
+        this.pendingWrites = [...pending.slice(pending.indexOf(line)), ...this.pendingWrites];
+
+        this.rotate("size")
+          .then(() => this.processPendingWrites())
+          .catch((err) => console.error(`[${DEFAULT_PACKAGE_NAME}] Rotation failed:`, err));
+
+        return;
+      }
+
+      // Write to current file
       this.bytesWritten += lineBytes;
       this.sonic.write(line);
     }
-    this.pendingWrites = [];
   }
 
   /**
