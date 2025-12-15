@@ -2,7 +2,7 @@ import fsPromises from "node:fs/promises";
 import path from "node:path";
 import { LOCK_PATHS, LOCK_SETTINGS } from "../config";
 import type { WorkerLockData } from "../types";
-import { ensureDir, fileExists, readJsonFile, writeJsonFile } from "../utils/file";
+import { ensureLocksDir, fileExists, readJsonFile, writeJsonFile } from "../utils/file";
 import { getISOTimestamp } from "../utils/time";
 
 export type WorkerType = "archive" | "retention" | "meta";
@@ -33,8 +33,8 @@ export async function tryAcquireWorkerLock(
 ): Promise<WorkerLockData | null> {
   const lockPath = getWorkerLockPath(logDir, workerType);
 
-  // Ensure locks directory exists
-  await ensureDir(path.dirname(lockPath));
+  // Ensure .locks directory exists with README
+  await ensureLocksDir(logDir);
 
   // Check if lock exists
   if (await fileExists(lockPath)) {

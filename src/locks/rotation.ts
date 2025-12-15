@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { LOCK_PATHS, LOCK_SETTINGS } from "../config";
+import { ensureLocksDirSync } from "../utils/file";
 
 /**
  * Rotation lock using atomic mkdir.
@@ -35,11 +36,8 @@ export function tryAcquireRotationLock(logDir: string): boolean {
       // Lock doesn't exist, that's fine
     }
 
-    // Ensure parent directory exists
-    const locksDir = path.dirname(lockPath);
-    if (!fs.existsSync(locksDir)) {
-      fs.mkdirSync(locksDir, { recursive: true });
-    }
+    // Ensure .locks directory exists with README
+    ensureLocksDirSync(logDir);
 
     // Try to create lock directory (atomic operation)
     fs.mkdirSync(lockPath);

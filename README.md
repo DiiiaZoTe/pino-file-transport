@@ -230,7 +230,7 @@ logs/
 │   │   └── 2025-01-02.log      # Meta cleanup events
 │   └── error/
 │       └── 2025-01-02.log      # Error events (when metaError: true, default)
-├── .locks/                     # Internal lock files (auto-managed)
+├── .locks/                     # Internal lock files (auto-managed) ⚠️ DO NOT DELETE
 └── archives/
     ├── 2024-12-archive.tar.gz  # Monthly archive
     └── 2024-11-archive.tar.gz
@@ -511,6 +511,18 @@ Note: While the transport uses filesystem locks to coordinate log file rotation 
 | Archive Worker | 20s | Ensure only one process runs archiving |
 | Retention Worker | 20s | Ensure only one process runs retention cleanup |
 | Meta Worker | 20s | Ensure only one process runs meta log cleanup |
+
+### ⚠️ Important: Do Not Delete the `.locks` Folder
+
+The `.locks` folder inside your log directory is critical for coordinating operations across multiple processes. **Never delete this folder while the application is running.**
+
+Deleting the `.locks` folder can cause:
+- Data corruption
+- Race conditions between processes
+- Multiple workers processing the same files
+- Log file conflicts
+
+The folder contains a `README.md` file with this warning. Stale lock files are automatically detected and cleaned up by the transport.
 
 ### High-Load Considerations
 
