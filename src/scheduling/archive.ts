@@ -1,6 +1,6 @@
 import { Worker } from "node:worker_threads";
 import cron from "node-cron";
-import { LOCK_SETTINGS, getArchiveCron } from "../config";
+import { getArchiveCron, LOCK_SETTINGS } from "../config";
 import { checkStaleLock, tryAcquireWorkerLock } from "../locks/worker";
 import type { ResolvedTransportOptions } from "../types";
 import { logArchive } from "../utils/meta-log";
