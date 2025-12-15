@@ -14,6 +14,7 @@ import { getCurrentRotationPeriod, getISOTimestamp } from "../utils/time";
 export class FileTransport {
   private options: ResolvedTransportOptions;
   private sonic: SonicBoom;
+  private sonicWrite: (data: string) => boolean;
   private currentPeriod: string;
   private currentFilePath: string;
   private bytesWritten: number = 0;
@@ -44,6 +45,10 @@ export class FileTransport {
       mkdir: true,
       append: true,
     });
+
+    // Store original write method before any override
+    // This prevents infinite recursion when stream.write is overridden externally
+    this.sonicWrite = this.sonic.write.bind(this.sonic);
 
     // Handle errors
     this.sonic.on("error", (err) => {
@@ -89,7 +94,7 @@ export class FileTransport {
 
     // Normal write
     this.bytesWritten += lineBytes;
-    return this.sonic.write(line);
+    return this.sonicWrite(line);
   }
 
   /**
@@ -236,7 +241,7 @@ export class FileTransport {
 
       // Write to current file
       this.bytesWritten += lineBytes;
-      this.sonic.write(line);
+      this.sonicWrite(line);
     }
   }
 

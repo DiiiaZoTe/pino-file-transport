@@ -156,6 +156,11 @@ export default function (options: TransportOptions): SonicBoom {
   // Get the underlying SonicBoom stream
   const stream = transport.stream;
 
+  // Override write to route through FileTransport (for rotation logic)
+  stream.write = (data: string): boolean => {
+    return transport.write(data);
+  };
+
   // Override end to clean up schedulers
   const originalEnd = stream.end.bind(stream);
   stream.end = (...args: Parameters<typeof originalEnd>): ReturnType<typeof originalEnd> => {
