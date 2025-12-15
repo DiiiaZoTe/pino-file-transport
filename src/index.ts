@@ -86,8 +86,8 @@ function validateConstraints(options: ResolvedTransportOptions): void {
   if (options.archive.enabled && archiveHours < rotationHours) {
     throw new Error(
       `[${DEFAULT_PACKAGE_NAME}] Invalid configuration: archive.frequency ("${options.archive.frequency}") ` +
-      `must be >= rotation.frequency ("${options.rotation.frequency}"). ` +
-      `Cannot archive incomplete rotation periods.`,
+        `must be >= rotation.frequency ("${options.rotation.frequency}"). ` +
+        `Cannot archive incomplete rotation periods.`,
     );
   }
 
@@ -99,16 +99,16 @@ function validateConstraints(options: ResolvedTransportOptions): void {
     if (options.archive.enabled && retentionHours < archiveHours) {
       throw new Error(
         `[${DEFAULT_PACKAGE_NAME}] Invalid configuration: retention.duration ("${options.retention.duration}") ` +
-        `must be >= archive.frequency ("${options.archive.frequency}"). ` +
-        `Cannot delete files before they can be archived.`,
+          `must be >= archive.frequency ("${options.archive.frequency}"). ` +
+          `Cannot delete files before they can be archived.`,
       );
     }
 
     if (retentionHours < rotationHours) {
       throw new Error(
         `[${DEFAULT_PACKAGE_NAME}] Invalid configuration: retention.duration ("${options.retention.duration}") ` +
-        `must be >= rotation.frequency ("${options.rotation.frequency}"). ` +
-        `Cannot delete files before rotation period ends.`,
+          `must be >= rotation.frequency ("${options.rotation.frequency}"). ` +
+          `Cannot delete files before rotation period ends.`,
       );
     }
 
@@ -116,7 +116,7 @@ function validateConstraints(options: ResolvedTransportOptions): void {
     if (unit === "h" && options.rotation.frequency === "daily") {
       throw new Error(
         `[${DEFAULT_PACKAGE_NAME}] Invalid configuration: retention.duration with hours ("${options.retention.duration}") ` +
-        `cannot be used with daily rotation. Use "d" (days) or higher units.`,
+          `cannot be used with daily rotation. Use "d" (days) or higher units.`,
       );
     }
   }

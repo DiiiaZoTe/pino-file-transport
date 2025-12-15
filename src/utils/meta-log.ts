@@ -127,7 +127,7 @@ function writeMetaLog(logDir: string, type: string, entry: object): void {
     const line = `${JSON.stringify(entry)}\n`;
 
     // Fire-and-forget: non-blocking append, errors silently ignored
-    fs.appendFile(metaFile, line, "utf-8", () => { });
+    fs.appendFile(metaFile, line, "utf-8", () => {});
   } catch {
     // Ignore meta logging errors (e.g., ensureDirSync failure)
   }

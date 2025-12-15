@@ -84,7 +84,7 @@ export function startRetentionScheduler(options: ResolvedTransportOptions): () =
 
   // No duration configured - nothing to do
   if (!retention.duration) {
-    return () => { };
+    return () => {};
   }
 
   // Run immediately on creation
