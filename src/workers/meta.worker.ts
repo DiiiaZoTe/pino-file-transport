@@ -6,6 +6,7 @@ import { releaseWorkerLock, startHeartbeat } from "../locks/worker";
 import type { ResolvedTransportOptions } from "../types";
 import { fileExists } from "../utils/file";
 import { logError, logMeta } from "../utils/meta-log";
+import { getCutoffDate } from "../utils/time";
 
 /**
  * Parse a meta log filename to extract its date.
@@ -40,9 +41,7 @@ export async function runMetaWorker(options: ResolvedTransportOptions): Promise<
     }
 
     // Calculate cutoff date (X days ago)
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - meta.retention);
-    cutoffDate.setHours(0, 0, 0, 0); // Start of day
+    const cutoffDate = getCutoffDate(new Date(), meta.retention, "d");
 
     if (meta.logging) {
       logMeta(
