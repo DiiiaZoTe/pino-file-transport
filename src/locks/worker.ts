@@ -5,13 +5,20 @@ import type { WorkerLockData } from "../types";
 import { ensureDir, fileExists, readJsonFile, writeJsonFile } from "../utils/file";
 import { getISOTimestamp } from "../utils/time";
 
-export type WorkerType = "archive" | "retention";
+export type WorkerType = "archive" | "retention" | "meta";
+
+/** Map worker types to their lock file names */
+const WORKER_LOCK_FILES: Record<WorkerType, string> = {
+  archive: LOCK_PATHS.ARCHIVE_LOCK,
+  retention: LOCK_PATHS.RETENTION_LOCK,
+  meta: LOCK_PATHS.META_LOCK,
+};
 
 /**
  * Get the worker lock file path.
  */
 export function getWorkerLockPath(logDir: string, workerType: WorkerType): string {
-  const lockFile = workerType === "archive" ? LOCK_PATHS.ARCHIVE_LOCK : LOCK_PATHS.RETENTION_LOCK;
+  const lockFile = WORKER_LOCK_FILES[workerType];
   return path.join(logDir, LOCK_PATHS.LOCKS_DIR, lockFile);
 }
 

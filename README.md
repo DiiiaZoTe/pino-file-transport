@@ -59,7 +59,7 @@ const stream = createTransport({
   path: "./logs",
   rotation: { maxSize: 50, frequency: "daily" },
   archive: { enabled: true, frequency: "monthly" },
-  retention: { enabled: true, duration: "30d" },
+  retention: { duration: "30d" },
 });
 
 const logger = pino(stream);
@@ -100,9 +100,15 @@ const options: TransportOptions = {
 
   // Retention options
   retention: {
-    enabled: true,          // Enable retention (default: true)
     duration: "30d",        // Delete logs/archives older than this (default: undefined)
     logging: false,         // Log retention operations (default: false)
+  },
+
+  // Meta logs options
+  meta: {
+    retention: 7,           // Days to keep meta logs (default: 7)
+    error: true,            // Log errors to .meta/error (default: true)
+    logging: false,         // Log meta cleanup operations (default: false)
   },
 
   // SonicBoom options (optional - fine-tune the underlying stream)
@@ -151,9 +157,16 @@ const logger = pino({
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enabled` | `boolean` | `true` | Enable retention |
-| `duration` | `DurationFormat` | `undefined` | Retention period (e.g., "7d", "3m", "1y") |
+| `duration` | `DurationFormat` | `undefined` | Retention period for logs/archives (e.g., "7d", "3m", "1y") |
 | `logging` | `boolean` | `false` | Log retention operations |
+
+#### Meta Options (`meta`)
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `retention` | `number` | `7` | Days to keep meta logs in `.meta/` subdirectories |
+| `error` | `boolean` | `true` | Log internal errors to `.meta/error/` |
+| `logging` | `boolean` | `false` | Log meta cleanup operations |
 
 #### SonicBoom Options (`sonicBoom`)
 
@@ -205,8 +218,18 @@ logs/
 ├── 2025-01-01~15-59-59.log     # Overflow file (when max size exceeded)
 ├── 2025-01-01~15-59-59~123.log # Overflow with milliseconds (rare, high-throughput)
 ├── 2025-01-02.log              # Today's log file
-├── .meta/
-│   └── rotation.log            # Rotation events (when rotation.logging: true)
+├── .meta/                      # Internal meta logs (auto-managed, rotated daily)
+│   ├── rotation/
+│   │   ├── 2025-01-01.log      # Rotation events (when rotation.logging: true)
+│   │   └── 2025-01-02.log
+│   ├── archive/
+│   │   └── 2025-01-02.log      # Archive events (when archive.logging: true)
+│   ├── retention/
+│   │   └── 2025-01-02.log      # Retention events (when retention.logging: true)
+│   ├── meta/
+│   │   └── 2025-01-02.log      # Meta cleanup events
+│   └── error/
+│       └── 2025-01-02.log      # Error events (when metaError: true, default)
 ├── .locks/                     # Internal lock files (auto-managed)
 └── archives/
     ├── 2024-12-archive.tar.gz  # Monthly archive
@@ -487,6 +510,7 @@ Note: While the transport uses filesystem locks to coordinate log file rotation 
 | Rotation | 10s | Coordinate log file rotation between processes |
 | Archive Worker | 20s | Ensure only one process runs archiving |
 | Retention Worker | 20s | Ensure only one process runs retention cleanup |
+| Meta Worker | 20s | Ensure only one process runs meta log cleanup |
 
 ### High-Load Considerations
 

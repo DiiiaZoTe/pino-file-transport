@@ -4,7 +4,7 @@ import { workerData } from "node:worker_threads";
 import { releaseWorkerLock, startHeartbeat } from "../locks/worker";
 import type { ResolvedTransportOptions } from "../types";
 import { fileExists } from "../utils/file";
-import { logRetention } from "../utils/meta-log";
+import { logError, logRetention } from "../utils/meta-log";
 import { parseArchiveFilename, parseDuration, parseLogFilename } from "../utils/parsing";
 import { getCutoffDate } from "../utils/time";
 
@@ -55,6 +55,7 @@ export async function runRetentionWorker(options: ResolvedTransportOptions): Pro
           }
         } catch (err) {
           logRetention(logDir, `Failed to delete log file ${file}: ${err}`);
+          logError(logDir, "retention", err, options.meta.error);
         }
       }
     }
@@ -78,6 +79,7 @@ export async function runRetentionWorker(options: ResolvedTransportOptions): Pro
             }
           } catch (err) {
             logRetention(logDir, `Failed to delete archive file ${file}: ${err}`);
+            logError(logDir, "retention", err, options.meta.error);
           }
         }
       }
@@ -95,6 +97,7 @@ export async function runRetentionWorker(options: ResolvedTransportOptions): Pro
     }
   } catch (err) {
     logRetention(logDir, `Retention worker error: ${err}`);
+    logError(logDir, "retention", err, options.meta.error);
   } finally {
     // Stop heartbeat and release lock
     clearInterval(heartbeatInterval);

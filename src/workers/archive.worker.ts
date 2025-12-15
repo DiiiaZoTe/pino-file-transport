@@ -5,7 +5,7 @@ import { c as tar } from "tar";
 import { releaseWorkerLock, startHeartbeat } from "../locks/worker";
 import type { ResolvedTransportOptions } from "../types";
 import { ensureDir, fileExists } from "../utils/file";
-import { logArchive } from "../utils/meta-log";
+import { logArchive, logError } from "../utils/meta-log";
 import { getArchiveFilename, getFilePeriod } from "../utils/parsing";
 import { getCurrentArchivePeriod } from "../utils/time";
 
@@ -104,6 +104,7 @@ export async function runArchiveWorker(options: ResolvedTransportOptions): Promi
     }
   } catch (err) {
     logArchive(logDir, `Archive worker error: ${err}`);
+    logError(logDir, "archive", err, options.meta.error);
   } finally {
     // Stop heartbeat and release lock
     clearInterval(heartbeatInterval);

@@ -18,8 +18,12 @@ export const DEFAULT_OPTIONS: ResolvedTransportOptions = {
     logging: false,
   },
   retention: {
-    enabled: true,
     duration: undefined, // No retention by default
+    logging: false,
+  },
+  meta: {
+    retention: 7, // Keep 7 days of meta logs by default
+    error: true, // Log errors to .meta/error by default
     logging: false,
   },
 };
@@ -47,7 +51,14 @@ export const LOCK_PATHS = {
   ROTATION_LOCK: "rotation",
   ARCHIVE_LOCK: "archive.json",
   RETENTION_LOCK: "retention.json",
+  META_LOCK: "meta.json",
 } as const;
 
 /** Meta directory for internal logging */
 export const META_DIR = ".meta";
+
+/** Meta log subdirectories */
+export const META_SUBDIRS = ["rotation", "archive", "retention", "error"] as const;
+
+/** Meta cleanup cron schedule (daily at 2 AM) */
+export const META_CLEANUP_CRON = "0 2 * * *";

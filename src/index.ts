@@ -1,6 +1,7 @@
 import type SonicBoom from "sonic-boom";
 import { DEFAULT_OPTIONS, DEFAULT_PACKAGE_NAME } from "./config";
 import { startArchiveScheduler } from "./scheduling/archive";
+import { startMetaScheduler } from "./scheduling/meta";
 import { startRetentionScheduler } from "./scheduling/retention";
 import { FileTransport } from "./transport/file-transport";
 import type {
@@ -56,9 +57,13 @@ function resolveOptions(options: TransportOptions): ResolvedTransportOptions {
       logging: options.archive?.logging ?? DEFAULT_OPTIONS.archive.logging,
     },
     retention: {
-      enabled: options.retention?.enabled ?? DEFAULT_OPTIONS.retention.enabled,
       duration: options.retention?.duration ?? DEFAULT_OPTIONS.retention.duration,
       logging: options.retention?.logging ?? DEFAULT_OPTIONS.retention.logging,
+    },
+    meta: {
+      retention: options.meta?.retention ?? DEFAULT_OPTIONS.meta.retention,
+      error: options.meta?.error ?? DEFAULT_OPTIONS.meta.error,
+      logging: options.meta?.logging ?? DEFAULT_OPTIONS.meta.logging,
     },
     sonicBoom: options.sonicBoom,
   };
@@ -81,29 +86,29 @@ function validateConstraints(options: ResolvedTransportOptions): void {
   if (options.archive.enabled && archiveHours < rotationHours) {
     throw new Error(
       `[${DEFAULT_PACKAGE_NAME}] Invalid configuration: archive.frequency ("${options.archive.frequency}") ` +
-        `must be >= rotation.frequency ("${options.rotation.frequency}"). ` +
-        `Cannot archive incomplete rotation periods.`,
+      `must be >= rotation.frequency ("${options.rotation.frequency}"). ` +
+      `Cannot archive incomplete rotation periods.`,
     );
   }
 
-  // retention.duration >= archive.frequency (when both enabled)
-  if (options.retention.enabled && options.retention.duration) {
+  // retention.duration >= archive.frequency (when retention is configured)
+  if (options.retention.duration) {
     const { value, unit } = parseDuration(options.retention.duration);
     const retentionHours = durationToHours(value, unit);
 
     if (options.archive.enabled && retentionHours < archiveHours) {
       throw new Error(
         `[${DEFAULT_PACKAGE_NAME}] Invalid configuration: retention.duration ("${options.retention.duration}") ` +
-          `must be >= archive.frequency ("${options.archive.frequency}"). ` +
-          `Cannot delete files before they can be archived.`,
+        `must be >= archive.frequency ("${options.archive.frequency}"). ` +
+        `Cannot delete files before they can be archived.`,
       );
     }
 
     if (retentionHours < rotationHours) {
       throw new Error(
         `[${DEFAULT_PACKAGE_NAME}] Invalid configuration: retention.duration ("${options.retention.duration}") ` +
-          `must be >= rotation.frequency ("${options.rotation.frequency}"). ` +
-          `Cannot delete files before rotation period ends.`,
+        `must be >= rotation.frequency ("${options.rotation.frequency}"). ` +
+        `Cannot delete files before rotation period ends.`,
       );
     }
 
@@ -111,7 +116,7 @@ function validateConstraints(options: ResolvedTransportOptions): void {
     if (unit === "h" && options.rotation.frequency === "daily") {
       throw new Error(
         `[${DEFAULT_PACKAGE_NAME}] Invalid configuration: retention.duration with hours ("${options.retention.duration}") ` +
-          `cannot be used with daily rotation. Use "d" (days) or higher units.`,
+        `cannot be used with daily rotation. Use "d" (days) or higher units.`,
       );
     }
   }
@@ -131,7 +136,7 @@ function validateConstraints(options: ResolvedTransportOptions): void {
  *       path: "./logs",
  *       rotation: { maxSize: 100, frequency: "daily" },
  *       archive: { enabled: true, frequency: "monthly" },
- *       retention: { enabled: true, duration: "30d" },
+ *       retention: { duration: "30d" },
  *     },
  *   },
  * });
@@ -150,11 +155,14 @@ export default function (options: TransportOptions): SonicBoom {
     stopArchive = startArchiveScheduler(resolved);
   }
 
-  // Start retention scheduler if enabled and duration is set
+  // Start retention scheduler if duration is set
   let stopRetention: (() => void) | undefined;
-  if (resolved.retention.enabled && resolved.retention.duration) {
+  if (resolved.retention.duration) {
     stopRetention = startRetentionScheduler(resolved);
   }
+
+  // Start meta cleanup scheduler (always runs, default 7 days retention)
+  const stopMeta = startMetaScheduler(resolved);
 
   // Get the underlying SonicBoom stream
   const stream = transport.stream;
@@ -169,6 +177,7 @@ export default function (options: TransportOptions): SonicBoom {
   stream.end = (...args: Parameters<typeof originalEnd>): ReturnType<typeof originalEnd> => {
     stopArchive?.();
     stopRetention?.();
+    stopMeta();
     return originalEnd(...args);
   };
 

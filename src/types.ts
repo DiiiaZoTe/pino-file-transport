@@ -92,11 +92,6 @@ export type ArchiveConfig = {
  */
 export type RetentionConfig = {
   /**
-   * Whether retention is enabled.
-   * @default true
-   */
-  enabled?: boolean;
-  /**
    * Retention duration. Deletes logs and archives older than this duration.
    * Format: <number><unit> where unit is:
    * - "h" (hours)
@@ -117,6 +112,32 @@ export type RetentionConfig = {
 };
 
 /**
+ * Meta logs configuration options.
+ * Controls internal logging for rotation, archive, retention events and errors.
+ */
+export type MetaConfig = {
+  /**
+   * Number of days to keep meta logs (rotation, archive, retention, error logs in `.meta/`).
+   * Meta logs are rotated daily and cleaned up by a separate worker.
+   *
+   * @default 7
+   */
+  retention?: number;
+  /**
+   * Whether to log internal errors to `.meta/error/`.
+   * Errors are logged with context (operation, error type, message) without sensitive data.
+   *
+   * @default true
+   */
+  error?: boolean;
+  /**
+   * Whether to log meta cleanup events.
+   * @default false
+   */
+  logging?: boolean;
+};
+
+/**
  * Transport options for pino-file-transport.
  *
  * @example
@@ -130,7 +151,7 @@ export type RetentionConfig = {
  *       path: "./logs",
  *       rotation: { maxSize: 100, frequency: "daily" },
  *       archive: { enabled: true, frequency: "monthly" },
- *       retention: { enabled: true, duration: "30d" },
+ *       retention: { duration: "30d" },
  *     },
  *   },
  * });
@@ -153,9 +174,14 @@ export type TransportOptions = {
   archive?: ArchiveConfig;
   /**
    * Retention configuration.
-   * @default { enabled: true, duration: undefined, logging: false }
+   * @default { duration: undefined, logging: false }
    */
   retention?: RetentionConfig;
+  /**
+   * Meta logs configuration.
+   * @default { retention: 7, error: true, logging: false }
+   */
+  meta?: MetaConfig;
   /**
    * SonicBoom stream configuration.
    * Allows fine-tuning the underlying SonicBoom stream.
@@ -197,8 +223,14 @@ export type ResolvedArchiveConfig = {
 
 /** Retention config with all defaults applied */
 export type ResolvedRetentionConfig = {
-  enabled: boolean;
   duration?: DurationFormat;
+  logging: boolean;
+};
+
+/** Meta config with all defaults applied */
+export type ResolvedMetaConfig = {
+  retention: number;
+  error: boolean;
   logging: boolean;
 };
 
@@ -211,6 +243,7 @@ export type ResolvedTransportOptions = {
   rotation: ResolvedRotationConfig;
   archive: ResolvedArchiveConfig;
   retention: ResolvedRetentionConfig;
+  meta: ResolvedMetaConfig;
   sonicBoom?: SonicBoomOptions;
 };
 

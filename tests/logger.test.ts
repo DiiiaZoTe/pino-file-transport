@@ -51,7 +51,7 @@ const getHourlyFilePath = (testNum: string) => path.join(getTestLogDir(testNum),
 const createOptions = (testNum: string, options: Partial<TransportOptions> = {}): TransportOptions => ({
   path: getTestLogDir(testNum),
   archive: { runOnCreation: false, enabled: false, ...options.archive },
-  retention: { enabled: false, ...options.retention },
+  retention: { ...options.retention },
   rotation: { ...options.rotation },
   ...options,
 });
@@ -125,7 +125,7 @@ describe("Pino File Transport - Direct API", () => {
       createTransport({
         path: getTestLogDir("04"),
         archive: { frequency: "monthly", enabled: true },
-        retention: { duration: "1w", enabled: true },
+        retention: { duration: "1w" },
       });
     }).toThrow(/retention.duration.*must be >= archive.frequency/);
   });
@@ -194,7 +194,7 @@ describe("Pino File Transport - With pino.transport()", () => {
           path: logDir,
           rotation: { frequency: "hourly" },
           archive: { runOnCreation: false, enabled: false },
-          retention: { enabled: false },
+          retention: {},
         } satisfies TransportOptions,
       },
     });
@@ -227,7 +227,7 @@ describe("Pino File Transport - With pino.transport()", () => {
           path: logDir,
           rotation: { maxSize: 1 },
           archive: { runOnCreation: false, enabled: false },
-          retention: { enabled: false },
+          retention: {},
         } satisfies TransportOptions,
       },
     });
@@ -256,7 +256,6 @@ describe("Pino File Transport - With pino.transport()", () => {
       path: logDir,
       rotation: { maxSize: 0 },
       archive: { runOnCreation: false, enabled: false },
-      retention: { enabled: false },
     });
 
     const logger = pino(stream);
@@ -291,7 +290,6 @@ describe("Pino File Transport - With pino.transport()", () => {
       path: logDir,
       rotation: { maxSize: 1, logging: true },
       archive: { runOnCreation: false, enabled: false },
-      retention: { enabled: false },
     });
 
     const logger = pino(stream);
@@ -457,7 +455,7 @@ describe("Retention Worker", () => {
     // Run retention worker with 7d duration
     await runRetentionWorker(createResolvedOptions("15", {
       archive: { path: TEST_ARCHIVE_DIR, enabled: false },
-      retention: { duration: "7d", enabled: true, logging: false },
+      retention: { duration: "7d", logging: false },
     }));
 
     const files = await fs.readdir(logDir);
@@ -494,7 +492,7 @@ describe("Retention Worker", () => {
     // Run retention worker
     await runRetentionWorker(createResolvedOptions("16", {
       archive: { path: TEST_ARCHIVE_DIR, enabled: true },
-      retention: { duration: "7d", enabled: true, logging: false },
+      retention: { duration: "7d", logging: false },
     }));
 
     const archiveFiles = await fs.readdir(archivePath);
@@ -522,7 +520,7 @@ describe("Retention Worker", () => {
 
     // Run retention worker without duration
     await runRetentionWorker(createResolvedOptions("17", {
-      retention: { enabled: true, duration: undefined },
+      retention: { duration: undefined },
     }));
 
     const files = await fs.readdir(logDir);
@@ -578,7 +576,7 @@ describe("Archive + Retention Integration", () => {
 
     const resolvedOptions = createResolvedOptions("18", {
       archive: { frequency: "daily", path: TEST_ARCHIVE_DIR, enabled: true, logging: false },
-      retention: { duration: "14d", enabled: true, logging: false },
+      retention: { duration: "14d", logging: false },
     });
 
     // Step 1: Run archive worker - should archive all logs except today's

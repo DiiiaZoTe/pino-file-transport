@@ -17,11 +17,12 @@
   "exports": {
     ".": "./dist/index.js",
     "./archive.worker": "./dist/workers/archive.worker.js",
-    "./retention.worker": "./dist/workers/retention.worker.js"
+    "./retention.worker": "./dist/workers/retention.worker.js",
+    "./meta.worker": "./dist/workers/meta.worker.js"
   },
   "scripts": {
     "build": "bun run clean && bun run build:types && bun run build:compile",
-    "build:compile": "bun build src/index.ts src/workers/archive.worker.ts src/workers/retention.worker.ts --outdir dist --target node --format esm --packages=external",
+    "build:compile": "bun build src/index.ts src/workers/archive.worker.ts src/workers/retention.worker.ts src/workers/meta.worker.ts --outdir dist --target node --format esm --packages=external",
     "build:types": "tsc --emitDeclarationOnly --project tsconfig.json",
     "test": "bun run build && bun test",
     "benchmark": "bun run build && bun run tests/benchmark.ts",
