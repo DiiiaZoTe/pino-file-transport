@@ -145,9 +145,7 @@ const loggerFactories: Record<string, LoggerFactory> = {
     const logDir = path.join(BENCHMARK_LOG_DIR_BASE, "pino-file-transport-direct");
     const stream = createTransport({
       path: logDir,
-      rotation: { frequency: "daily", maxSize: 100 },
-      archive: { enabled: false },
-      retention: { enabled: false },
+      rotation: { frequency: "daily", maxSize: 100, logging: true },
     });
     return pino({ level: "info" }, stream);
   },
@@ -160,9 +158,7 @@ const loggerFactories: Record<string, LoggerFactory> = {
         target: TRANSPORT_TARGET,
         options: {
           path: logDir,
-          rotation: { frequency: "daily", maxSize: 100 },
-          archive: { enabled: false },
-          retention: { enabled: false },
+          rotation: { frequency: "daily", maxSize: 100, logging: true },
         },
       },
     });

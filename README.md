@@ -478,7 +478,7 @@ if (cluster.isPrimary) {
 }
 ```
 
-Note: While the transport uses filesystem locks to coordinate log file rotation and minimize conflicts in a clustered environment, it is still possible—under very high load and due to submillisecond timing—that multiple processes or threads could perform max size rotation simultaneously. This is rare, but can result in multiple overflow log files for a given rotation interval. The transport is designed to safely handle this situation and log integrity is maintained, but you may see occasional extra rotated files in these scenarios.
+Note: While the transport uses filesystem locks to coordinate log file rotation and minimize conflicts in a clustered environment, it is still possible under high load (100K+ logs/sec) and due to submillisecond timing—that multiple processes or threads could perform max size rotation simultaneously. This is extremely rare, but can result in multiple overflow log files for a given rotation interval. The transport is designed to safely handle this situation and log integrity is maintained, but you may see occasional extra rotated files in these scenarios.
 
 ### Lock Behavior
 
