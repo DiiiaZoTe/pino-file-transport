@@ -1,6 +1,6 @@
 import { Worker } from "node:worker_threads";
 import cron from "node-cron";
-import { LOCK_SETTINGS, META_CLEANUP_CRON } from "../config";
+import { LOCK_SETTINGS, getMetaCleanupCron } from "../config";
 import { checkStaleLock, tryAcquireWorkerLock } from "../locks/worker";
 import type { ResolvedTransportOptions } from "../types";
 import { logMeta } from "../utils/meta-log";
@@ -74,14 +74,17 @@ export function startMetaScheduler(options: ResolvedTransportOptions): () => voi
   // Run immediately on creation
   tryRunMetaCleanup(options);
 
+  // Get cron schedule based on execution hour
+  const cronSchedule = getMetaCleanupCron(meta.executionHour);
+
   if (meta.logging) {
     logMeta(
       options.path,
-      `Scheduling meta cleanup (retention: ${meta.retention} days, cron: ${META_CLEANUP_CRON})`,
+      `Scheduling meta cleanup (retention: ${meta.retention} days, cron: ${cronSchedule})`,
     );
   }
 
-  const task = cron.schedule(META_CLEANUP_CRON, () => {
+  const task = cron.schedule(cronSchedule, () => {
     tryRunMetaCleanup(options);
   });
 

@@ -95,12 +95,14 @@ const options: TransportOptions = {
     path: "archives",       // Archive directory relative to log path (default: "archives")
     frequency: "monthly",   // "hourly" | "daily" | "weekly" | "monthly" (default: "monthly")
     runOnCreation: true,    // Run archive check on transport creation (default: true)
+    executionHour: 1,       // Hour (0-23) to run archive job (default: 1)
     logging: false,         // Log archive operations (default: false)
   },
 
   // Retention options
   retention: {
     duration: "30d",        // Delete logs/archives older than this (default: undefined)
+    executionHour: 1,       // Hour (0-23) to run retention job (default: 1)
     logging: false,         // Log retention operations (default: false)
   },
 
@@ -108,6 +110,7 @@ const options: TransportOptions = {
   meta: {
     retention: 7,           // Days to keep meta logs (default: 7)
     error: true,            // Log errors to .meta/error (default: true)
+    executionHour: 1,       // Hour (0-23) to run meta cleanup job (default: 1)
     logging: false,         // Log meta cleanup operations (default: false)
   },
 
@@ -151,6 +154,7 @@ const logger = pino({
 | `path` | `string` | `"archives"` | Archive directory relative to log path |
 | `frequency` | `"hourly" \| "daily" \| "weekly" \| "monthly"` | `"monthly"` | How often to archive logs |
 | `runOnCreation` | `boolean` | `true` | Archive needed files immediately on startup |
+| `executionHour` | `number` | `1` | Hour (0-23) to run archive job (ignored for hourly) |
 | `logging` | `boolean` | `false` | Log archiver operations |
 
 #### Retention Options (`retention`)
@@ -158,6 +162,7 @@ const logger = pino({
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `duration` | `DurationFormat` | `undefined` | Retention period for logs/archives (e.g., "7d", "3m", "1y") |
+| `executionHour` | `number` | `1` | Hour (0-23) to run retention job (ignored for hourly) |
 | `logging` | `boolean` | `false` | Log retention operations |
 
 #### Meta Options (`meta`)
@@ -166,6 +171,7 @@ const logger = pino({
 |--------|------|---------|-------------|
 | `retention` | `number` | `7` | Days to keep meta logs in `.meta/` subdirectories |
 | `error` | `boolean` | `true` | Log internal errors to `.meta/error/` |
+| `executionHour` | `number` | `1` | Hour (0-23) to run meta cleanup job |
 | `logging` | `boolean` | `false` | Log meta cleanup operations |
 
 #### SonicBoom Options (`sonicBoom`)

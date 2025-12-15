@@ -81,6 +81,13 @@ export type ArchiveConfig = {
    */
   runOnCreation?: boolean;
   /**
+   * Hour of the day (0-23) to run the archive job.
+   * Only applies to daily, weekly, and monthly frequencies.
+   * Hourly frequency always runs at the top of each hour.
+   * @default 1
+   */
+  executionHour?: number;
+  /**
    * Whether to log archiving events.
    * @default false
    */
@@ -104,6 +111,13 @@ export type RetentionConfig = {
    * @default undefined (no retention - logs kept indefinitely)
    */
   duration?: DurationFormat;
+  /**
+   * Hour of the day (0-23) to run the retention cleanup job.
+   * Only applies to daily, weekly, monthly, and yearly retention units.
+   * Hourly retention always runs at the top of each hour.
+   * @default 1
+   */
+  executionHour?: number;
   /**
    * Whether to log retention events.
    * @default false
@@ -130,6 +144,12 @@ export type MetaConfig = {
    * @default true
    */
   error?: boolean;
+  /**
+   * Hour of the day (0-23) to run the meta cleanup job.
+   * Meta cleanup runs daily at this hour.
+   * @default 1
+   */
+  executionHour?: number;
   /**
    * Whether to log meta cleanup events.
    * @default false
@@ -218,12 +238,14 @@ export type ResolvedArchiveConfig = {
   path: string;
   frequency: ArchiveFrequency;
   runOnCreation: boolean;
+  executionHour: number;
   logging: boolean;
 };
 
 /** Retention config with all defaults applied */
 export type ResolvedRetentionConfig = {
   duration?: DurationFormat;
+  executionHour: number;
   logging: boolean;
 };
 
@@ -231,6 +253,7 @@ export type ResolvedRetentionConfig = {
 export type ResolvedMetaConfig = {
   retention: number;
   error: boolean;
+  executionHour: number;
   logging: boolean;
 };
 
@@ -261,25 +284,4 @@ export type WorkerLockData = {
   heartbeat: string;
   /** Retry attempt number */
   attempt: number;
-};
-
-// ============================================================================
-// Cron Schedule Types
-// ============================================================================
-
-/** Default archive cron schedules */
-export const DEFAULT_ARCHIVE_CRON: Record<ArchiveFrequency, string> = {
-  hourly: "5 * * * *", // 5 mins past every hour
-  daily: "0 1 * * *", // 1 AM daily
-  weekly: "0 1 * * 1", // 1 AM Monday
-  monthly: "0 1 1 * *", // 1 AM, 1st of month
-};
-
-/** Default retention cron schedules based on duration unit */
-export const DEFAULT_RETENTION_CRON: Record<DurationUnit, string> = {
-  h: "5 * * * *", // 5 mins past every hour
-  d: "0 1 * * *", // 1 AM daily
-  w: "0 1 * * 1", // 1 AM Monday
-  m: "0 1 1 * *", // 1 AM, 1st of month
-  y: "0 1 1 1 *", // 1 AM, Jan 1st
 };

@@ -1,8 +1,8 @@
 import { Worker } from "node:worker_threads";
 import cron from "node-cron";
-import { LOCK_SETTINGS } from "../config";
+import { LOCK_SETTINGS, getRetentionCron } from "../config";
 import { checkStaleLock, tryAcquireWorkerLock } from "../locks/worker";
-import { DEFAULT_RETENTION_CRON, type ResolvedTransportOptions } from "../types";
+import type { ResolvedTransportOptions } from "../types";
 import { logRetention } from "../utils/meta-log";
 import { parseDuration } from "../utils/parsing";
 import { resolveWorkerPath } from "../utils/worker-path";
@@ -84,15 +84,15 @@ export function startRetentionScheduler(options: ResolvedTransportOptions): () =
 
   // No duration configured - nothing to do
   if (!retention.duration) {
-    return () => {};
+    return () => { };
   }
 
   // Run immediately on creation
   tryRunRetention(options);
 
-  // Get cron schedule based on duration unit
+  // Get cron schedule based on duration unit and execution hour
   const { unit } = parseDuration(retention.duration);
-  const cronSchedule = DEFAULT_RETENTION_CRON[unit];
+  const cronSchedule = getRetentionCron(unit, retention.executionHour);
 
   if (retention.logging) {
     logRetention(

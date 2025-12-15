@@ -1,8 +1,8 @@
 import { Worker } from "node:worker_threads";
 import cron from "node-cron";
-import { LOCK_SETTINGS } from "../config";
+import { LOCK_SETTINGS, getArchiveCron } from "../config";
 import { checkStaleLock, tryAcquireWorkerLock } from "../locks/worker";
-import { DEFAULT_ARCHIVE_CRON, type ResolvedTransportOptions } from "../types";
+import type { ResolvedTransportOptions } from "../types";
 import { logArchive } from "../utils/meta-log";
 import { resolveWorkerPath } from "../utils/worker-path";
 
@@ -78,7 +78,7 @@ export function startArchiveScheduler(options: ResolvedTransportOptions): () => 
   }
 
   // Schedule cron job
-  const cronSchedule = DEFAULT_ARCHIVE_CRON[archive.frequency];
+  const cronSchedule = getArchiveCron(archive.frequency, archive.executionHour);
 
   if (archive.logging) {
     logArchive(

@@ -55,15 +55,18 @@ function resolveOptions(options: TransportOptions): ResolvedTransportOptions {
       frequency: options.archive?.frequency ?? DEFAULT_OPTIONS.archive.frequency,
       runOnCreation: options.archive?.runOnCreation ?? DEFAULT_OPTIONS.archive.runOnCreation,
       logging: options.archive?.logging ?? DEFAULT_OPTIONS.archive.logging,
+      executionHour: options.archive?.executionHour ?? DEFAULT_OPTIONS.archive.executionHour,
     },
     retention: {
       duration: options.retention?.duration ?? DEFAULT_OPTIONS.retention.duration,
       logging: options.retention?.logging ?? DEFAULT_OPTIONS.retention.logging,
+      executionHour: options.retention?.executionHour ?? DEFAULT_OPTIONS.retention.executionHour,
     },
     meta: {
       retention: options.meta?.retention ?? DEFAULT_OPTIONS.meta.retention,
       error: options.meta?.error ?? DEFAULT_OPTIONS.meta.error,
       logging: options.meta?.logging ?? DEFAULT_OPTIONS.meta.logging,
+      executionHour: options.meta?.executionHour ?? DEFAULT_OPTIONS.meta.executionHour,
     },
     sonicBoom: options.sonicBoom,
   };
