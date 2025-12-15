@@ -2,7 +2,7 @@
   "name": "pino-file-transport",
   "author": "DiiiaZoTe",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Pino file transport with rotation, archiving, and retention support for Node/Bun projects.",
   "type": "module",
   "repository": {
