@@ -56,19 +56,19 @@ export class FileTransport {
     });
   }
 
-  private writeCount = 0;
+  // Adaptive disk check interval - adjusts based on throughput
+  private lastDiskCheckTime = Date.now();
+  private lastDiskSize = 0;
+  private nextCheckIntervalMs = 500; // Start at middle value for fast adaptation both ways
+  private static readonly MIN_CHECK_INTERVAL_MS = 50; // Floor - don't check more often than this
+  private static readonly MAX_CHECK_INTERVAL_MS = 2000; // Ceiling - always check at least this often
+  private static readonly ROTATION_THRESHOLD_PERCENT = 0.98; // Trigger rotation at 98% full
 
   /**
    * Write a log line.
    * This is the main write interface for pino.
    */
   write(data: string): boolean {
-    // DEBUG: Log first write to confirm this method is being called
-    if (this.writeCount === 0) {
-      console.error(`[DEBUG] FileTransport.write() FIRST CALL - maxSizeBytes: ${this.maxSizeBytes}`);
-    }
-    this.writeCount++;
-
     const line = data.endsWith("\n") ? data : `${data}\n`;
 
     // During rotation, buffer writes
@@ -82,20 +82,61 @@ export class FileTransport {
     // Check if rotation is needed
     const currentPeriod = getCurrentRotationPeriod(this.options.rotation.frequency);
     const periodChanged = currentPeriod !== this.currentPeriod;
-    const sizeExceeded =
-      this.maxSizeBytes > 0 && this.bytesWritten + lineBytes >= this.maxSizeBytes;
 
-    // DEBUG: Log every 10MB
-    if (this.bytesWritten > 0 && this.bytesWritten % (10 * 1024 * 1024) < lineBytes) {
-      console.error(`[DEBUG] bytesWritten: ${(this.bytesWritten / 1024 / 1024).toFixed(2)}MB, maxSizeBytes: ${this.maxSizeBytes}, sizeExceeded: ${sizeExceeded}`);
+    // For size check: use adaptive interval that adjusts based on throughput
+    // This handles multi-process scenarios where other workers may have written to the file
+    let sizeExceeded = false;
+    if (this.maxSizeBytes > 0) {
+      const now = Date.now();
+
+      // Adaptive disk check - interval adjusts based on throughput and remaining space
+      if (now - this.lastDiskCheckTime >= this.nextCheckIntervalMs) {
+        // Flush SonicBoom buffer first so disk size is accurate
+        this.sonic.flush();
+
+        const actualSize = getFileSizeSync(this.currentFilePath);
+        const elapsedMs = now - this.lastDiskCheckTime;
+
+        // Calculate throughput from actual disk growth
+        const bytesGrown = actualSize - this.lastDiskSize;
+        const bytesPerMs = elapsedMs > 0 ? bytesGrown / elapsedMs : 0;
+
+        // Calculate remaining space
+        const bytesRemaining = this.maxSizeBytes - actualSize;
+        const fillPercent = actualSize / this.maxSizeBytes;
+
+        if (actualSize >= this.maxSizeBytes) {
+          // Already at or over limit
+          sizeExceeded = true;
+        } else if (fillPercent >= FileTransport.ROTATION_THRESHOLD_PERCENT) {
+          // Very close to limit (98%+) - trigger rotation to avoid rapid-fire checks
+          sizeExceeded = true;
+        } else if (bytesPerMs > 0 && bytesRemaining > 0) {
+          // Estimate time to fill remaining space
+          const msToFill = bytesRemaining / bytesPerMs;
+          // Check again at 25% of estimated fill time, clamped to min/max
+          this.nextCheckIntervalMs = Math.max(
+            FileTransport.MIN_CHECK_INTERVAL_MS,
+            Math.min(FileTransport.MAX_CHECK_INTERVAL_MS, msToFill / 4),
+          );
+        }
+
+        // Update tracking
+        this.lastDiskSize = actualSize;
+        this.lastDiskCheckTime = now;
+        this.bytesWritten = actualSize;
+      }
+
+      // Also check in-memory estimate (for fast single-process detection)
+      if (!sizeExceeded && this.bytesWritten + lineBytes >= this.maxSizeBytes) {
+        sizeExceeded = true;
+      }
     }
 
     if (periodChanged || sizeExceeded) {
       // Start rotation
       this.isRotating = true;
       this.pendingWrites.push(line);
-
-      console.error(`[DEBUG] ROTATION TRIGGERED! reason: ${sizeExceeded ? "size" : "period"}, bytesWritten: ${(this.bytesWritten / 1024 / 1024).toFixed(2)}MB`);
 
       this.rotate(sizeExceeded ? "size" : "period")
         .then(() => this.processPendingWrites())
@@ -217,6 +258,12 @@ export class FileTransport {
       // Update tracking
       this.currentFilePath = newPath;
       this.bytesWritten = getFileSizeSync(newPath);
+
+      // Reset disk size tracking for new file, but KEEP the learned check interval
+      // This ensures high-throughput scenarios continue with aggressive checking
+      this.lastDiskSize = this.bytesWritten;
+      this.lastDiskCheckTime = Date.now();
+      // Note: intentionally NOT resetting nextCheckIntervalMs - carry over learned throughput
 
       // Log rotation event if enabled
       if (this.options.rotation.logging) {
