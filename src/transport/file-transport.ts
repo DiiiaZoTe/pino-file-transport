@@ -231,7 +231,42 @@ export class FileTransport {
     const gotLock = await waitForRotationLock(this.options.path);
 
     try {
-      // Flush current buffer
+      // Update period first (needed for findAvailableLogPath)
+      this.currentPeriod = getCurrentRotationPeriod(this.options.rotation.frequency);
+
+      // === CRITICAL: Recheck if rotation is still needed after acquiring lock ===
+      // Another worker might have rotated while we were waiting
+      if (reason === "size" && this.maxSizeBytes > 0) {
+        const currentSize = getFileSizeSync(this.currentFilePath);
+        if (currentSize < this.maxSizeBytes * FileTransport.ROTATION_THRESHOLD_PERCENT) {
+          // Current file now has space (another worker must have rotated)
+          // Just sync our tracking and skip rotation
+          this.bytesWritten = currentSize;
+          this.lastDiskSize = currentSize;
+          this.lastDiskCheckTime = Date.now();
+          return;
+        }
+      }
+
+      // Current file is truly full - find the best available file
+      // This might be an overflow file another worker just created
+      const newPath = this.findAvailableLogPath(reason === "size");
+
+      // Check if we're already on the best file (edge case)
+      if (newPath === this.currentFilePath) {
+        // We're already on the best file but it's full
+        // This means we need a brand new file - findAvailableLogPath should handle this
+        // via generateOverflowFilename, but double-check
+        const size = getFileSizeSync(newPath);
+        if (size < this.maxSizeBytes) {
+          // Actually has space, just sync and return
+          this.bytesWritten = size;
+          this.lastDiskSize = size;
+          return;
+        }
+      }
+
+      // Flush current buffer before switching files
       this.sonic.flush();
 
       // Wait for drain event indicating buffer is flushed
@@ -245,12 +280,6 @@ export class FileTransport {
           this.sonic.once("drain", resolve);
         }
       });
-
-      // Update period
-      this.currentPeriod = getCurrentRotationPeriod(this.options.rotation.frequency);
-
-      // Find new file path
-      const newPath = this.findAvailableLogPath(reason === "size");
 
       // Reopen SonicBoom with new path
       this.sonic.reopen(newPath);
