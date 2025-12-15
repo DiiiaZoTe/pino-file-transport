@@ -281,6 +281,11 @@ export class FileTransport {
         }
       });
 
+      // Ensure the new file exists on disk BEFORE reopen
+      // This is critical: sonic.reopen() is async, and without this,
+      // other workers doing readdirSync might not see the file yet
+      fs.closeSync(fs.openSync(newPath, "a"));
+
       // Reopen SonicBoom with new path
       this.sonic.reopen(newPath);
 
