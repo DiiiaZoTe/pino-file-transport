@@ -1,8 +1,9 @@
 import { Worker } from "node:worker_threads";
 import cron from "node-cron";
-import { DEFAULT_PACKAGE_NAME, LOCK_SETTINGS } from "../config";
+import { LOCK_SETTINGS } from "../config";
 import { checkStaleLock, tryAcquireWorkerLock } from "../locks/worker";
 import { DEFAULT_ARCHIVE_CRON, type ResolvedTransportOptions } from "../types";
+import { logArchive } from "../utils/meta-log";
 import { resolveWorkerPath } from "../utils/worker-path";
 
 /**
@@ -13,7 +14,9 @@ function spawnArchiveWorker(options: ResolvedTransportOptions): void {
     const workerPath = resolveWorkerPath("archive.worker");
     new Worker(workerPath, { workerData: options });
   } catch (err) {
-    console.error(`[${DEFAULT_PACKAGE_NAME}] Failed to spawn archive worker:`, err);
+    if (options.archive.logging) {
+      logArchive(options.path, `Failed to spawn archive worker: ${err}`);
+    }
   }
 }
 
@@ -30,9 +33,7 @@ async function tryRunArchive(options: ResolvedTransportOptions): Promise<void> {
   if (lockData) {
     // We got the lock, spawn the worker
     if (archive.logging) {
-      console.log(
-        `[${DEFAULT_PACKAGE_NAME}] Acquired archive lock, spawning worker (attempt: ${lockData.attempt})`,
-      );
+      logArchive(logDir, `Acquired archive lock, spawning worker (attempt: ${lockData.attempt})`);
     }
     spawnArchiveWorker(options);
   }
@@ -53,8 +54,9 @@ function scheduleHeartbeatCheck(options: ResolvedTransportOptions): void {
     const staleLock = await checkStaleLock(logDir, "archive");
     if (staleLock) {
       if (archive.logging) {
-        console.log(
-          `[${DEFAULT_PACKAGE_NAME}] Archive worker stale (last heartbeat: ${staleLock.heartbeat}), retrying...`,
+        logArchive(
+          logDir,
+          `Archive worker stale (last heartbeat: ${staleLock.heartbeat}), retrying...`,
         );
       }
       // Try to take over and retry
@@ -79,8 +81,9 @@ export function startArchiveScheduler(options: ResolvedTransportOptions): () => 
   const cronSchedule = DEFAULT_ARCHIVE_CRON[archive.frequency];
 
   if (archive.logging) {
-    console.log(
-      `[${DEFAULT_PACKAGE_NAME}] Scheduling archive (frequency: ${archive.frequency}, cron: ${cronSchedule})`,
+    logArchive(
+      options.path,
+      `Scheduling archive (frequency: ${archive.frequency}, cron: ${cronSchedule})`,
     );
   }
 
@@ -91,7 +94,7 @@ export function startArchiveScheduler(options: ResolvedTransportOptions): () => 
   return () => {
     task.stop();
     if (archive.logging) {
-      console.log(`[${DEFAULT_PACKAGE_NAME}] Archive scheduler stopped`);
+      logArchive(options.path, "Archive scheduler stopped");
     }
   };
 }

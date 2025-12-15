@@ -1,10 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { workerData } from "node:worker_threads";
-import { DEFAULT_PACKAGE_NAME } from "../config";
 import { releaseWorkerLock, startHeartbeat } from "../locks/worker";
 import type { ResolvedTransportOptions } from "../types";
 import { fileExists } from "../utils/file";
+import { logRetention } from "../utils/meta-log";
 import { parseArchiveFilename, parseDuration, parseLogFilename } from "../utils/parsing";
 import { getCutoffDate } from "../utils/time";
 
@@ -29,8 +29,9 @@ export async function runRetentionWorker(options: ResolvedTransportOptions): Pro
     const cutoffDate = getCutoffDate(now, value, unit);
 
     if (retention.logging) {
-      console.log(
-        `[${DEFAULT_PACKAGE_NAME}] Running retention worker (duration: ${retention.duration}) - deleting files older than ${cutoffDate.toISOString()}`,
+      logRetention(
+        logDir,
+        `Running retention worker (duration: ${retention.duration}) - deleting files older than ${cutoffDate.toISOString()}`,
       );
     }
 
@@ -50,10 +51,10 @@ export async function runRetentionWorker(options: ResolvedTransportOptions): Pro
           await fs.unlink(filePath);
           deletedLogs++;
           if (retention.logging) {
-            console.log(`[${DEFAULT_PACKAGE_NAME}] Deleted log file: ${file}`);
+            logRetention(logDir, `Deleted log file: ${file}`);
           }
         } catch (err) {
-          console.error(`[${DEFAULT_PACKAGE_NAME}] Failed to delete log file ${file}:`, err);
+          logRetention(logDir, `Failed to delete log file ${file}: ${err}`);
         }
       }
     }
@@ -73,10 +74,10 @@ export async function runRetentionWorker(options: ResolvedTransportOptions): Pro
             await fs.unlink(filePath);
             deletedArchives++;
             if (retention.logging) {
-              console.log(`[${DEFAULT_PACKAGE_NAME}] Deleted archive file: ${file}`);
+              logRetention(logDir, `Deleted archive file: ${file}`);
             }
           } catch (err) {
-            console.error(`[${DEFAULT_PACKAGE_NAME}] Failed to delete archive file ${file}:`, err);
+            logRetention(logDir, `Failed to delete archive file ${file}: ${err}`);
           }
         }
       }
@@ -84,15 +85,16 @@ export async function runRetentionWorker(options: ResolvedTransportOptions): Pro
 
     if (retention.logging) {
       if (deletedLogs > 0 || deletedArchives > 0) {
-        console.log(
-          `[${DEFAULT_PACKAGE_NAME}] Retention complete: deleted ${deletedLogs} logs, ${deletedArchives} archives`,
+        logRetention(
+          logDir,
+          `Retention complete: deleted ${deletedLogs} logs, ${deletedArchives} archives`,
         );
       } else {
-        console.log(`[${DEFAULT_PACKAGE_NAME}] Retention complete: no files to delete`);
+        logRetention(logDir, "Retention complete: no files to delete");
       }
     }
   } catch (err) {
-    console.error(`[${DEFAULT_PACKAGE_NAME}] Retention worker error:`, err);
+    logRetention(logDir, `Retention worker error: ${err}`);
   } finally {
     // Stop heartbeat and release lock
     clearInterval(heartbeatInterval);

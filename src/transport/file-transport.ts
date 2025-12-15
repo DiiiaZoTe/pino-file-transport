@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import SonicBoom from "sonic-boom";
-import { DEFAULT_PACKAGE_NAME, META_DIR } from "../config";
+import { DEFAULT_PACKAGE_NAME } from "../config";
 import { releaseRotationLock, waitForRotationLock } from "../locks/rotation";
 import type { ResolvedTransportOptions } from "../types";
 import { ensureDirSync, getFileSizeSync } from "../utils/file";
+import { logRotation } from "../utils/meta-log";
 import { generateOverflowFilename, getLogPath, getOverflowPattern } from "../utils/parsing";
-import { getCurrentRotationPeriod, getISOTimestamp } from "../utils/time";
+import { getCurrentRotationPeriod } from "../utils/time";
 
 /**
  * File transport using SonicBoom with rotation support.
@@ -301,7 +302,7 @@ export class FileTransport {
 
       // Log rotation event if enabled
       if (this.options.rotation.logging) {
-        await this.logRotationEvent(newPath, reason);
+        this.logRotationEvent(newPath, reason);
       }
     } finally {
       if (gotLock) {
@@ -344,17 +345,7 @@ export class FileTransport {
   /**
    * Log rotation event to meta file.
    */
-  private async logRotationEvent(newPath: string, reason: string): Promise<void> {
-    try {
-      const metaDir = path.join(this.options.path, META_DIR);
-      ensureDirSync(metaDir);
-
-      const metaFile = path.join(metaDir, "rotation.log");
-      const entry = `[${getISOTimestamp()}] Rotated to ${path.basename(newPath)} (reason: ${reason})\n`;
-
-      fs.appendFileSync(metaFile, entry, "utf-8");
-    } catch {
-      // Ignore meta logging errors
-    }
+  private logRotationEvent(newPath: string, reason: string): void {
+    logRotation(this.options.path, reason, path.basename(newPath));
   }
 }

@@ -1,8 +1,9 @@
 import { Worker } from "node:worker_threads";
 import cron from "node-cron";
-import { DEFAULT_PACKAGE_NAME, LOCK_SETTINGS } from "../config";
+import { LOCK_SETTINGS } from "../config";
 import { checkStaleLock, tryAcquireWorkerLock } from "../locks/worker";
 import { DEFAULT_RETENTION_CRON, type ResolvedTransportOptions } from "../types";
+import { logRetention } from "../utils/meta-log";
 import { parseDuration } from "../utils/parsing";
 import { resolveWorkerPath } from "../utils/worker-path";
 
@@ -14,7 +15,9 @@ function spawnRetentionWorker(options: ResolvedTransportOptions): void {
     const workerPath = resolveWorkerPath("retention.worker");
     new Worker(workerPath, { workerData: options });
   } catch (err) {
-    console.error(`[${DEFAULT_PACKAGE_NAME}] Failed to spawn retention worker:`, err);
+    if (options.retention.logging) {
+      logRetention(options.path, `Failed to spawn retention worker: ${err}`);
+    }
   }
 }
 
@@ -36,8 +39,9 @@ async function tryRunRetention(options: ResolvedTransportOptions): Promise<void>
   if (lockData) {
     // We got the lock, spawn the worker
     if (retention.logging) {
-      console.log(
-        `[${DEFAULT_PACKAGE_NAME}] Acquired retention lock, spawning worker (attempt: ${lockData.attempt})`,
+      logRetention(
+        logDir,
+        `Acquired retention lock, spawning worker (attempt: ${lockData.attempt})`,
       );
     }
     spawnRetentionWorker(options);
@@ -60,8 +64,9 @@ function scheduleHeartbeatCheck(options: ResolvedTransportOptions): void {
     const staleLock = await checkStaleLock(logDir, "retention");
     if (staleLock) {
       if (retention.logging) {
-        console.log(
-          `[${DEFAULT_PACKAGE_NAME}] Retention worker stale (last heartbeat: ${staleLock.heartbeat}), retrying...`,
+        logRetention(
+          logDir,
+          `Retention worker stale (last heartbeat: ${staleLock.heartbeat}), retrying...`,
         );
       }
       // Try to take over and retry
@@ -90,8 +95,9 @@ export function startRetentionScheduler(options: ResolvedTransportOptions): () =
   const cronSchedule = DEFAULT_RETENTION_CRON[unit];
 
   if (retention.logging) {
-    console.log(
-      `[${DEFAULT_PACKAGE_NAME}] Scheduling retention (duration: ${retention.duration}, cron: ${cronSchedule})`,
+    logRetention(
+      options.path,
+      `Scheduling retention (duration: ${retention.duration}, cron: ${cronSchedule})`,
     );
   }
 
@@ -102,7 +108,7 @@ export function startRetentionScheduler(options: ResolvedTransportOptions): () =
   return () => {
     task.stop();
     if (retention.logging) {
-      console.log(`[${DEFAULT_PACKAGE_NAME}] Retention scheduler stopped`);
+      logRetention(options.path, "Retention scheduler stopped");
     }
   };
 }
